@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,6 +20,7 @@ namespace FacturaScripts\Core\Controller;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\ListController;
+use FacturaScripts\Dinamic\Model\CodeModel;
 
 /**
  * Controller to list the items in the Cliente model
@@ -82,7 +83,10 @@ class ListCliente extends ListController
     protected function createViewContacts(string $viewName = 'ListContacto')
     {
         $this->addView($viewName, 'Contacto', 'addresses-and-contacts', 'fas fa-address-book');
-        $this->addSearchFields($viewName, ['nombre', 'apellidos', 'email', 'empresa', 'observaciones', 'telefono1', 'telefono2', 'lastip']);
+        $this->addSearchFields($viewName, [
+            'apellidos', 'codpostal', 'descripcion', 'direccion', 'email', 'empresa', 'lastip',
+            'nombre', 'observaciones', 'telefono1', 'telefono2'
+        ]);
         $this->addOrderBy($viewName, ['descripcion'], 'description');
         $this->addOrderBy($viewName, ['direccion'], 'address');
         $this->addOrderBy($viewName, ['nombre'], 'name');
@@ -101,10 +105,18 @@ class ListCliente extends ListController
         $this->addFilterSelect($viewName, 'codpais', 'country', 'codpais', $countries);
 
         $provinces = $this->codeModel->all('contactos', 'provincia', 'provincia');
-        $this->addFilterSelect($viewName, 'provincia', 'province', 'provincia', $provinces);
+        if (\count($provinces) >= CodeModel::ALL_LIMIT) {
+            $this->addFilterAutocomplete($viewName, 'provincia', 'province', 'provincia', 'contactos', 'provincia');
+        } else {
+            $this->addFilterSelect($viewName, 'provincia', 'province', 'provincia', $provinces);
+        }
 
         $cities = $this->codeModel->all('contactos', 'ciudad', 'ciudad');
-        $this->addFilterSelect($viewName, 'ciudad', 'city', 'ciudad', $cities);
+        if (\count($cities) >= CodeModel::ALL_LIMIT) {
+            $this->addFilterAutocomplete($viewName, 'ciudad', 'city', 'ciudad', 'contactos', 'ciudad');
+        } else {
+            $this->addFilterSelect($viewName, 'ciudad', 'city', 'ciudad', $cities);
+        }
 
         $this->addFilterCheckbox($viewName, 'verificado', 'verified', 'verificado');
     }
@@ -120,7 +132,7 @@ class ListCliente extends ListController
         $this->addOrderBy($viewName, ['codcliente'], 'code');
         $this->addOrderBy($viewName, ['nombre'], 'name', 1);
         $this->addOrderBy($viewName, ['cifnif'], 'fiscal-number');
-        $this->addOrderBy($viewName, ['fechaalta', 'codcliente'], 'date');
+        $this->addOrderBy($viewName, ['fechaalta', 'codcliente'], 'creation-date');
         $this->addOrderBy($viewName, ['riesgoalcanzado'], 'current-risk');
 
         /// filters

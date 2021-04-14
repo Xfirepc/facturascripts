@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -24,7 +24,7 @@
     <columns>
         <group name="data" numcolumns="12">
             <column name="code" numcolumns="3" order="100">
-                <widget type="text" fieldname="codbalance" icon="fas fa-hashtag" required="true" />
+                <widget type="text" fieldname="codbalance" icon="fas fa-hashtag" maxlength="15" required="true" />
             </column>
             <column name="nature" numcolumns="3" order="110">
                 <widget type="select" fieldname="naturaleza" translate="true" required="true">
@@ -34,20 +34,32 @@
                     <values title="income-and-expenses">IG</values>
                 </widget>
             </column>
-            <column name="description-1" numcolumns="6" order="120">
-                <widget type="text" fieldname="descripcion1" />
+            <column name="level1" numcolumns="2" order="120">
+                <widget type="text" fieldname="nivel1" />
             </column>
-            <column name="description-2" numcolumns="6" order="130">
-                <widget type="text" fieldname="descripcion2" />
+            <column name="description-1" numcolumns="4" order="130">
+                <widget type="text" fieldname="descripcion1" maxlength="255" />
             </column>
-            <column name="description-3" numcolumns="6" order="140">
-                <widget type="text" fieldname="descripcion3" />
+            <column name="level2" numcolumns="2" order="140">
+                <widget type="text" fieldname="nivel2" />
             </column>
-            <column name="description-4" numcolumns="6" order="150">
-                <widget type="text" fieldname="descripcion4" />
+            <column name="description-2" numcolumns="4" order="150">
+                <widget type="text" fieldname="descripcion2" maxlength="255" />
             </column>
-            <column name="description-4ba" numcolumns="6" order="160">
-                <widget type="text" fieldname="descripcion4ba" />
+            <column name="level3" numcolumns="2" order="160">
+                <widget type="text" fieldname="nivel3" />
+            </column>
+            <column name="description-3" numcolumns="4" order="170">
+                <widget type="text" fieldname="descripcion3" maxlength="255" />
+            </column>
+            <column name="level4" numcolumns="2" order="180">
+                <widget type="text" fieldname="nivel4" />
+            </column>
+            <column name="description-4" numcolumns="4" order="190">
+                <widget type="text" fieldname="descripcion4" maxlength="255" />
+            </column>
+            <column name="description-4ba" numcolumns="6" order="200">
+                <widget type="text" fieldname="descripcion4ba" maxlength="255" />
             </column>
         </group>
     </columns>

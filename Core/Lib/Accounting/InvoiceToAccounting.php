@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2018-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2018-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -18,14 +18,16 @@
  */
 namespace FacturaScripts\Core\Lib\Accounting;
 
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Dinamic\Lib\BusinessDocumentTools;
 use FacturaScripts\Dinamic\Model\Asiento;
 use FacturaScripts\Dinamic\Model\Cliente;
+use FacturaScripts\Dinamic\Model\Cuenta;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
 use FacturaScripts\Dinamic\Model\Impuesto;
-use FacturaScripts\Dinamic\Model\ModelView\PurchasesDocLineAccount;
-use FacturaScripts\Dinamic\Model\ModelView\SalesDocLineAccount;
+use FacturaScripts\Dinamic\Model\Join\PurchasesDocLineAccount;
+use FacturaScripts\Dinamic\Model\Join\SalesDocLineAccount;
 use FacturaScripts\Dinamic\Model\Proveedor;
 use FacturaScripts\Dinamic\Model\Retencion;
 use FacturaScripts\Dinamic\Model\Serie;
@@ -120,7 +122,10 @@ class InvoiceToAccounting extends AccountingClass
      */
     protected function addGoodsPurchaseLine($accountEntry)
     {
-        $purchaseAccount = $this->getSpecialSubAccount('COMPRA');
+        $rectifAccount = $this->getSpecialSubAccount('DEVCOM');
+        $purchaseAccount = (bool) $this->document->idfacturarect && $rectifAccount->exists() ? $rectifAccount :
+            $this->getSpecialSubAccount('COMPRA');
+
         $tool = new PurchasesDocLineAccount();
         foreach ($tool->getTotalsForDocument($this->document, $purchaseAccount->codsubcuenta) as $code => $total) {
             $subaccount = $this->getSubAccount($code);
@@ -151,7 +156,10 @@ class InvoiceToAccounting extends AccountingClass
      */
     protected function addGoodsSalesLine($accountEntry)
     {
-        $salesAccount = $this->getSpecialSubAccount('VENTAS');
+        $rectifAccount = $this->getSpecialSubAccount('DEVVEN');
+        $salesAccount = (bool) $this->document->idfacturarect && $rectifAccount->exists() ? $rectifAccount :
+            $this->getSpecialSubAccount('VENTAS');
+
         $tool = new SalesDocLineAccount();
         foreach ($tool->getTotalsForDocument($this->document, $salesAccount->codsubcuenta) as $code => $total) {
             $subaccount = $this->getSubAccount($code);
@@ -380,6 +388,13 @@ class InvoiceToAccounting extends AccountingClass
             return false;
         }
 
+        $cuenta = new Cuenta();
+        $where = [new DataBaseWhere('codejercicio', $this->document->codejercicio)];
+        if (0 === $cuenta->count($where)) {
+            $this->toolBox()->i18nLog()->warning('accounting-data-missing', ['%exerciseName%' => $this->document->codejercicio]);
+            return false;
+        }
+
         return true;
     }
 
@@ -399,8 +414,12 @@ class InvoiceToAccounting extends AccountingClass
      */
     protected function purchaseAccountingEntry()
     {
+        $concept = $this->toolBox()->i18n()->trans('supplier-invoice') . ' ' . $this->document->codigo;
+        $concept .= $this->document->numproveedor ? ' (' . $this->document->numproveedor . ') - ' . $this->document->nombre :
+            ' - ' . $this->document->nombre;
+
         $accountEntry = new Asiento();
-        $this->setAccountingData($accountEntry, $this->toolBox()->i18n()->trans('supplier-invoice') . ' ' . $this->document->codigo);
+        $this->setAccountingData($accountEntry, $concept);
         if (false === $accountEntry->save()) {
             $this->toolBox()->i18nLog()->warning('accounting-entry-error');
             return;
@@ -425,9 +444,12 @@ class InvoiceToAccounting extends AccountingClass
      */
     protected function salesAccountingEntry()
     {
-        $accountEntry = new Asiento();
-        $this->setAccountingData($accountEntry, $this->toolBox()->i18n()->trans('customer-invoice') . ' ' . $this->document->codigo);
+        $concept = $this->toolBox()->i18n()->trans('customer-invoice') . ' ' . $this->document->codigo;
+        $concept .= $this->document->numero2 ? ' (' . $this->document->numero2 . ') - ' . $this->document->nombrecliente :
+            ' - ' . $this->document->nombrecliente;
 
+        $accountEntry = new Asiento();
+        $this->setAccountingData($accountEntry, $concept);
         if (false === $accountEntry->save()) {
             $this->toolBox()->i18nLog()->warning('accounting-entry-error');
             return;

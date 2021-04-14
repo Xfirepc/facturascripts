@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2018-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2018-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -38,8 +38,8 @@ use Symfony\Component\HttpFoundation\Response;
 class SendMail extends Controller
 {
 
-    /// 2 hours
-    const MAX_FILE_AGE = 7200;
+    /// 30 days
+    const MAX_FILE_AGE = 2592000;
     const MODEL_NAMESPACE = '\\FacturaScripts\\Dinamic\\Model\\';
 
     /**
@@ -82,6 +82,7 @@ class SendMail extends Controller
         parent::privateCore($response, $user, $permissions);
         $this->codeModel = new CodeModel();
         $this->newMail = new NewMail();
+        $this->newMail->setUser($this->user);
 
         /// Check if the email is configurate
         if (false === $this->newMail->canSendMail()) {
@@ -230,7 +231,12 @@ class SendMail extends Controller
      */
     protected function send()
     {
-        $this->newMail->fromNick = $this->user->nick;
+        if ($this->newMail->fromEmail === $this->user->email) {
+            /// do not add replyTo
+        } elseif ((bool) $this->request->request->get('replyto', '0')) {
+            $this->newMail->addReplyTo($this->user->email, $this->user->nick);
+        }
+
         $this->newMail->title = $this->request->request->get('subject', '');
         $this->newMail->text = $this->request->request->get('body', '');
 
@@ -284,19 +290,19 @@ class SendMail extends Controller
         }
 
         $proveedor = new Proveedor();
-        if (\property_exists($model, 'codproveedor') && $proveedor->loadFromCode($model->codproveedor)) {
+        if (\property_exists($model, 'codproveedor') && $proveedor->loadFromCode($model->codproveedor) && $proveedor->email) {
             $this->newMail->addAddress($proveedor->email, $proveedor->razonsocial);
             return;
         }
 
         $contact = new Contacto();
-        if (\property_exists($model, 'idcontactofact') && $contact->loadFromCode($model->idcontactofact)) {
+        if (\property_exists($model, 'idcontactofact') && $contact->loadFromCode($model->idcontactofact) && $contact->email) {
             $this->newMail->addAddress($contact->email, $contact->fullName());
             return;
         }
 
         $cliente = new Cliente();
-        if (\property_exists($model, 'codcliente') && $cliente->loadFromCode($model->codcliente)) {
+        if (\property_exists($model, 'codcliente') && $cliente->loadFromCode($model->codcliente) && $cliente->email) {
             $this->newMail->addAddress($cliente->email, $cliente->razonsocial);
         }
     }
@@ -315,7 +321,7 @@ class SendMail extends Controller
         $modelCode = $this->request->get('modelCode');
         if ($model->loadFromCode($modelCode) && \property_exists($className, 'femail')) {
             $model->femail = \date(Cliente::DATE_STYLE);
-            if (!$model->save()) {
+            if (false === $model->save()) {
                 $this->toolBox()->i18nLog()->error('error-saving-data');
             }
         }

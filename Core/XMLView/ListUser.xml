@@ -33,12 +33,12 @@
         <column name="language" order="130">
             <widget type="text" fieldname="langcode" />
         </column>
-        <column name="company" order="140">
+        <column name="company" display="none" order="140">
             <widget type="select" fieldname="idempresa" onclick="EditEmpresa">
                 <values source="empresas" fieldcode="idempresa" fieldtitle="nombrecorto" />
             </widget>
         </column>
-        <column name="warehouse" order="150">
+        <column name="warehouse" display="none" order="150">
             <widget type="select" fieldname="codalmacen" onclick="EditAlmacen">
                 <values source="almacenes" fieldcode="codalmacen" fieldtitle="nombre" />
             </widget>
@@ -46,7 +46,10 @@
         <column name="last-ip" order="160">
             <widget type="text" fieldname="lastip" />
         </column>
-        <column name="last-activity" display="right" order="170">
+        <column name="creation-date" display="none" order="170">
+            <widget type="date" fieldname="creationdate"/>
+        </column>
+        <column name="last-activity" display="right" order="180">
             <widget type="datetime" fieldname="lastactivity" />
         </column>
     </columns>

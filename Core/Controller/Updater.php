@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2018-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2018-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -22,13 +22,9 @@ use FacturaScripts\Core\Base\Controller;
 use FacturaScripts\Core\Base\ControllerPermissions;
 use FacturaScripts\Core\Base\DownloadTools;
 use FacturaScripts\Core\Base\FileManager;
+use FacturaScripts\Core\Base\Migrations;
 use FacturaScripts\Core\Base\PluginManager;
 use FacturaScripts\Core\Base\TelemetryManager;
-use FacturaScripts\Dinamic\Model\AttachedFile;
-use FacturaScripts\Dinamic\Model\Diario;
-use FacturaScripts\Dinamic\Model\IdentificadorFiscal;
-use FacturaScripts\Dinamic\Model\LiquidacionComision;
-use FacturaScripts\Dinamic\Model\Retencion;
 use FacturaScripts\Dinamic\Model\User;
 use Symfony\Component\HttpFoundation\Response;
 use ZipArchive;
@@ -102,7 +98,7 @@ class Updater extends Controller
 
         /// Folders writables?
         $folders = FileManager::notWritableFolders();
-        if (!empty($folders)) {
+        if ($folders) {
             $this->toolBox()->i18nLog()->warning('folder-not-writable');
             foreach ($folders as $folder) {
                 $this->toolBox()->log()->warning($folder);
@@ -115,14 +111,13 @@ class Updater extends Controller
     }
 
     /**
-     * Removed downloaded file.
+     * Remove downloaded file.
      */
     private function cancelAction()
     {
-        $idItem = $this->request->get('item', '');
-        $fileName = 'update-' . $idItem . '.zip';
-        if (file_exists(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName)) {
-            unlink(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName);
+        $fileName = 'update-' . $this->request->get('item', '') . '.zip';
+        if (\file_exists(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName)) {
+            \unlink(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName);
             $this->toolBox()->i18nLog()->notice('record-deleted-correctly');
         }
 
@@ -136,13 +131,14 @@ class Updater extends Controller
     private function downloadAction()
     {
         $idItem = $this->request->get('item', '');
+        $this->updaterItems = $this->getUpdateItems();
         foreach ($this->updaterItems as $key => $item) {
             if ($item['id'] != $idItem) {
                 continue;
             }
 
-            if (file_exists(\FS_FOLDER . DIRECTORY_SEPARATOR . $item['filename'])) {
-                unlink(\FS_FOLDER . DIRECTORY_SEPARATOR . $item['filename']);
+            if (\file_exists(\FS_FOLDER . DIRECTORY_SEPARATOR . $item['filename'])) {
+                \unlink(\FS_FOLDER . DIRECTORY_SEPARATOR . $item['filename']);
             }
 
             $downloader = new DownloadTools();
@@ -167,47 +163,31 @@ class Updater extends Controller
     {
         switch ($action) {
             case 'cancel':
-                $this->cancelAction();
-                $this->updaterItems = $this->getUpdateItems();
-                break;
+                return $this->cancelAction();
 
             case 'claim-install':
-                $this->redirect($this->telemetryManager->claimUrl());
-                break;
+                return $this->redirect($this->telemetryManager->claimUrl());
 
             case 'download':
-                $this->updaterItems = $this->getUpdateItems();
-                $this->downloadAction();
-                break;
+                return $this->downloadAction();
 
             case 'post-update':
-                $this->updaterItems = $this->getUpdateItems();
-                $this->initNewModels();
-                $this->pluginManager->deploy(true, true);
+                $this->postUpdateAction();
                 break;
 
             case 'register':
                 if ($this->telemetryManager->install()) {
                     $this->toolBox()->i18nLog()->notice('record-updated-correctly');
-                } else {
-                    $this->toolBox()->i18nLog()->error('record-save-error');
+                    break;
                 }
-                $this->updaterItems = $this->getUpdateItems();
+                $this->toolBox()->i18nLog()->error('record-save-error');
                 break;
 
             case 'update':
-                if ($this->updateAction()) {
-                    $this->pluginManager->deploy(true, false);
-                    $this->toolBox()->cache()->clear();
-                    $this->toolBox()->i18nLog()->notice('reloading');
-                    $this->redirect($this->getClassName() . '?action=post-update', 3);
-                }
-                break;
-
-            default:
-                $this->updaterItems = $this->getUpdateItems();
-                break;
+                return $this->updateAction();
         }
+
+        $this->updaterItems = $this->getUpdateItems();
     }
 
     /**
@@ -217,12 +197,12 @@ class Updater extends Controller
     private function getUpdateItems(): array
     {
         $cacheData = $this->toolBox()->cache()->get('UPDATE_ITEMS');
-        if (is_array($cacheData)) {
+        if (\is_array($cacheData)) {
             return $cacheData;
         }
 
         $downloader = new DownloadTools();
-        $json = json_decode($downloader->getContents(self::UPDATE_CORE_URL), true);
+        $json = \json_decode($downloader->getContents(self::UPDATE_CORE_URL), true);
         if (empty($json)) {
             return [];
         }
@@ -262,7 +242,7 @@ class Updater extends Controller
 
             $item = [
                 'description' => $this->toolBox()->i18n()->trans('core-update', ['%version%' => $build['version']]),
-                'downloaded' => file_exists(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName),
+                'downloaded' => \file_exists(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName),
                 'filename' => $fileName,
                 'id' => $projectData['project'],
                 'name' => $projectData['name'],
@@ -302,7 +282,7 @@ class Updater extends Controller
 
             $item = [
                 'description' => $this->toolBox()->i18n()->trans('plugin-update', ['%pluginName%' => $pluginUpdate['name'], '%version%' => $build['version']]),
-                'downloaded' => file_exists(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName),
+                'downloaded' => \file_exists(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName),
                 'filename' => $fileName,
                 'id' => $pluginUpdate['project'],
                 'name' => $pluginUpdate['name'],
@@ -325,18 +305,23 @@ class Updater extends Controller
         }
     }
 
-    private function initNewModels()
+    private function postUpdateAction()
     {
-        new AttachedFile();
-        new Diario();
-        new IdentificadorFiscal();
-        new Retencion();
-        new LiquidacionComision();
+        $plugName = $this->request->get('init', '');
+        if (empty($plugName)) {
+            Migrations::run();
+            $this->pluginManager->deploy(true, true);
+            return;
+        }
+
+        /// run Init::update() when plugin is updated
+        $this->pluginManager->initPlugin($plugName);
+        $this->pluginManager->deploy(true, true);
     }
 
     /**
      * Extract zip file and update all files.
-     * 
+     *
      * @return bool
      */
     private function updateAction(): bool
@@ -344,6 +329,7 @@ class Updater extends Controller
         $idItem = $this->request->get('item', '');
         $fileName = 'update-' . $idItem . '.zip';
 
+        /// open the zip file
         $zip = new ZipArchive();
         $zipStatus = $zip->open(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName, ZipArchive::CHECKCONS);
         if ($zipStatus !== true) {
@@ -351,7 +337,29 @@ class Updater extends Controller
             return false;
         }
 
-        return $idItem == self::CORE_PROJECT_ID ? $this->updateCore($zip, $fileName) : $this->updatePlugin($zip, $fileName);
+        /// get the name of the plugin to init after update (if the plugin is enabled)
+        $init = '';
+        foreach ($this->getUpdateItems() as $item) {
+            if ($idItem == self::CORE_PROJECT_ID) {
+                break;
+            }
+
+            if ($item['id'] == $idItem && \in_array($item['name'], $this->pluginManager->enabledPlugins())) {
+                $init = $item['name'];
+                break;
+            }
+        }
+
+        /// extract core/plugin zip file
+        $done = ($idItem == self::CORE_PROJECT_ID) ? $this->updateCore($zip, $fileName) : $this->updatePlugin($zip, $fileName);
+        if ($done) {
+            $this->pluginManager->deploy(true, false);
+            $this->toolBox()->cache()->clear();
+            $this->toolBox()->i18nLog()->notice('reloading');
+            $this->redirect($this->getClassName() . '?action=post-update&init=' . $init, 3);
+        }
+
+        return $done;
     }
 
     /**
@@ -364,7 +372,7 @@ class Updater extends Controller
     private function updateCore($zip, $fileName): bool
     {
         /// extract zip content
-        if (!$zip->extractTo(\FS_FOLDER)) {
+        if (false === $zip->extractTo(\FS_FOLDER)) {
             $this->toolBox()->log()->critical('ZIP EXTRACT ERROR: ' . $fileName);
             $zip->close();
             return false;
@@ -372,19 +380,19 @@ class Updater extends Controller
 
         /// remove zip file
         $zip->close();
-        unlink(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName);
+        \unlink(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName);
 
         /// update folders
         foreach (['Core', 'node_modules', 'vendor'] as $folder) {
             $origin = \FS_FOLDER . DIRECTORY_SEPARATOR . self::CORE_ZIP_FOLDER . DIRECTORY_SEPARATOR . $folder;
             $dest = \FS_FOLDER . DIRECTORY_SEPARATOR . $folder;
-            if (!file_exists($origin)) {
+            if (false === \file_exists($origin)) {
                 $this->toolBox()->log()->critical('COPY ERROR: ' . $origin);
                 return false;
             }
 
             FileManager::delTree($dest);
-            if (!FileManager::recurseCopy($origin, $dest)) {
+            if (false === FileManager::recurseCopy($origin, $dest)) {
                 $this->toolBox()->log()->critical('COPY ERROR2: ' . $origin);
                 return false;
             }
@@ -393,7 +401,7 @@ class Updater extends Controller
         /// update files
         $origin = \FS_FOLDER . DIRECTORY_SEPARATOR . self::CORE_ZIP_FOLDER . DIRECTORY_SEPARATOR . 'index.php';
         $dest = \FS_FOLDER . DIRECTORY_SEPARATOR . 'index.php';
-        copy($dest, $origin);
+        \copy($dest, $origin);
 
         /// remove zip folder
         FileManager::delTree(\FS_FOLDER . DIRECTORY_SEPARATOR . self::CORE_ZIP_FOLDER);
@@ -415,7 +423,7 @@ class Updater extends Controller
         $return = $this->pluginManager->install($fileName, 'plugin.zip', true);
 
         /// remove zip file
-        unlink(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName);
+        \unlink(\FS_FOLDER . DIRECTORY_SEPARATOR . $fileName);
         return $return;
     }
 }

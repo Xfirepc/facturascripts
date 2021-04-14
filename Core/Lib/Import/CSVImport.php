@@ -78,7 +78,7 @@ class CSVImport
     }
 
     /**
-     * 
+     *
      * @param string $table
      *
      * @return string
@@ -137,7 +137,7 @@ class CSVImport
     }
 
     /**
-     * 
+     *
      * @param string $sql
      * @param Csv    $csv
      *
@@ -154,8 +154,12 @@ class CSVImport
                 break;
 
             case 'postgresql':
-                /// TODO: do update
-                $sql .= ' ON CONFLICT DO NOTHING';
+                $sql .= ' ON CONFLICT ('
+                    . $csv->titles[0]
+                    . ') DO UPDATE SET '
+                    . \implode(', ', \array_map(function ($value) {
+                            return "{$value} = EXCLUDED.{$value}";
+                        }, $csv->titles, \array_keys($csv->titles)));
                 break;
         }
 

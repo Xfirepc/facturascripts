@@ -57,7 +57,7 @@ class GridView extends EditView
      *
      * @var string
      */
-    public $editTemplate = self::EDIT_TEMPLATE;
+    public $editTemplate = self::DEFAULT_TEMPLATE;
 
     /**
      * Grid data configuration and data
@@ -96,7 +96,7 @@ class GridView extends EditView
      */
     public function export(&$exportManager): bool
     {
-        if (!parent::export($exportManager)) {
+        if (false === parent::export($exportManager)) {
             return false;
         }
 
@@ -121,11 +121,11 @@ class GridView extends EditView
      */
     public function getDetailColumns($key = '')
     {
-        if (!array_key_exists($key, $this->detailView->columns)) {
+        if (false === \array_key_exists($key, $this->detailView->columns)) {
             if ($key == 'master') {
                 return [];
             }
-            $key = array_keys($this->detailView->columns)[0];
+            $key = \array_keys($this->detailView->columns)[0];
         }
 
         return $this->detailView->columns[$key]->columns;
@@ -138,7 +138,7 @@ class GridView extends EditView
      */
     public function getGridData(): string
     {
-        return json_encode($this->gridData);
+        return \json_encode($this->gridData);
     }
 
     /**
@@ -168,7 +168,7 @@ class GridView extends EditView
         parent::loadData($code, $where, $order, $offset, $limit);
 
         if ($this->count == 0) {
-            $this->template = self::EDIT_TEMPLATE;
+            $this->template = self::DEFAULT_TEMPLATE;
             return;
         }
 
@@ -202,7 +202,7 @@ class GridView extends EditView
         foreach ($this->detailModel->all($where, $order, 0, 0) as $line) {
             /// do not change to (array) $line
             $row = [];
-            foreach (array_keys($line->getModelFields()) as $field) {
+            foreach (\array_keys($line->getModelFields()) as $field) {
                 $row[$field] = $line->{$field};
             }
 
@@ -219,7 +219,7 @@ class GridView extends EditView
     {
         $result = [];
         foreach ($lines as $data) {
-            if (!is_array($data)) {
+            if (false === \is_array($data)) {
                 $result[] = [];
                 continue;
             }
@@ -253,7 +253,7 @@ class GridView extends EditView
 
         try {
             // load master document data and test it's ok
-            if (!$this->loadDocumentDataFromArray('code', $data['document'])) {
+            if (false === $this->loadDocumentDataFromArray('code', $data['document'])) {
                 throw new Exception($this->toolBox()->i18n()->trans('parent-document-test-error'));
             }
 
@@ -267,7 +267,7 @@ class GridView extends EditView
             $dataBase->beginTransaction();
 
             // delete old lines not used
-            if (!$this->deleteLinesOld($linesOld, $data['lines'])) {
+            if (false === $this->deleteLinesOld($linesOld, $data['lines'])) {
                 throw new Exception($this->toolBox()->i18n()->trans('error-deleting-lines'));
             }
 
@@ -275,7 +275,7 @@ class GridView extends EditView
             // Master Model must implement GridModelInterface
             $this->model->initTotals();
             foreach ($data['lines'] as $newLine) {
-                if (!$this->saveLines($documentFieldKey, $documentFieldValue, $newLine)) {
+                if (false === $this->saveLines($documentFieldKey, $documentFieldValue, $newLine)) {
                     throw new Exception($this->toolBox()->i18n()->trans('error-saving-lines'));
                 }
                 // Master Model must implement GridModelInterface
@@ -283,7 +283,7 @@ class GridView extends EditView
             }
 
             // save master document
-            if (!$this->model->save()) {
+            if (false === $this->model->save()) {
                 throw new Exception($this->toolBox()->i18n()->trans('record-save-error'));
             }
 
@@ -294,7 +294,7 @@ class GridView extends EditView
             $result['url'] = $this->model->url('edit') . '&action=save-ok';
         } catch (Exception $err) {
             $result['error'] = true;
-            $result['message'] = implode("\n", array_merge([$err->getMessage()], $this->getErrors()));
+            $result['message'] = \implode("\n", \array_merge([$err->getMessage()], $this->getErrors()));
         } finally {
             if ($dataBase->inTransaction()) {
                 $dataBase->rollback();
@@ -334,7 +334,7 @@ class GridView extends EditView
                 }
             }
 
-            if (!$found && !$lineOld->delete()) {
+            if (false === $found && false === $lineOld->delete()) {
                 return false;
             }
         }

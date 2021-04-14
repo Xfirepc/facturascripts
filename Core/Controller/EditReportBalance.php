@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2020-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -18,6 +18,7 @@
  */
 namespace FacturaScripts\Core\Controller;
 
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\ExtendedController\BaseView;
 use FacturaScripts\Core\Lib\ExtendedController\EditReportAccounting;
 use FacturaScripts\Core\Model\ReportBalance;
@@ -28,7 +29,8 @@ use FacturaScripts\Dinamic\Lib\Accounting\ProfitAndLoss;
 /**
  * Description of EditReportBalance
  *
- * @author Jose Antonio Cuello <jcuello@artextrading.com>
+ * @author Carlos Garcia Gomez  <carlos@facturascripts.com>
+ * @author Jose Antonio Cuello  <jcuello@artextrading.com>
  */
 class EditReportBalance extends EditReportAccounting
 {
@@ -55,6 +57,45 @@ class EditReportBalance extends EditReportAccounting
         $data['title'] = 'balances';
         $data['icon'] = 'fas fa-book';
         return $data;
+    }
+
+    protected function createViews()
+    {
+        parent::createViews();
+        /// disable company column if there is only one company
+        if ($this->empresa->count() < 2) {
+            $this->views[$this->getMainViewName()]->disableColumn('company');
+        }
+
+        $this->createViewsBalances();
+        $this->setTabsPosition('bottom');
+    }
+
+    /**
+     * 
+     * @param string $viewName
+     */
+    protected function createViewsBalances(string $viewName = 'ListBalance')
+    {
+        $this->addListView($viewName, 'Balance', 'preferences');
+        $this->views[$viewName]->addOrderBy(['codbalance'], 'code');
+        $this->views[$viewName]->addOrderBy(['descripcion1'], 'description-1');
+        $this->views[$viewName]->addOrderBy(['descripcion2'], 'description-2');
+        $this->views[$viewName]->addOrderBy(['descripcion3'], 'description-3');
+        $this->views[$viewName]->addOrderBy(['descripcion4'], 'description-4');
+        $this->views[$viewName]->addOrderBy(['descripcion4ba'], 'description-4ba');
+        $this->views[$viewName]->addSearchFields([
+            'codbalance', 'naturaleza', 'descripcion1', 'descripcion2',
+            'descripcion3', 'descripcion4', 'descripcion4ba'
+        ]);
+
+        /// disable column
+        $this->views[$viewName]->disableColumn('nature');
+
+        /// disable buttons
+        $this->setSettings($viewName, 'btnDelete', false);
+        $this->setSettings($viewName, 'btnNew', false);
+        $this->setSettings($viewName, 'checkBoxes', false);
     }
 
     /**
@@ -93,14 +134,26 @@ class EditReportBalance extends EditReportAccounting
     }
 
     /**
-     * Get Title for report
-     *
-     * @return string
+     * 
+     * @return array
      */
-    protected function getTitle(): string
+    protected function getPreferencesWhere()
     {
-        $model = $this->getModel();
-        return $this->toolBox()->i18n()->trans($model->type);
+        switch ($this->getModel()->type) {
+            case 'balance-sheet':
+                return [
+                    new DataBaseWhere('naturaleza', 'A'),
+                    new DataBaseWhere('naturaleza', 'P', '=', 'OR')
+                ];
+
+            case 'profit-and-loss':
+                return [new DataBaseWhere('naturaleza', 'PG')];
+
+            case 'income-and-expenses':
+                return [new DataBaseWhere('naturaleza', 'IG')];
+        }
+
+        return [];
     }
 
     /**
@@ -113,6 +166,11 @@ class EditReportBalance extends EditReportAccounting
     {
         $mainViewName = $this->getMainViewName();
         switch ($viewName) {
+            case 'ListBalance':
+                $where = $this->getPreferencesWhere();
+                $view->loadData('', $where);
+                break;
+
             case $mainViewName:
                 parent::loadData($viewName, $view);
                 $this->loadWidgetValues($view);

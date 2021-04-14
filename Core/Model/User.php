@@ -55,6 +55,12 @@ class User extends Base\ModelClass
     public $codalmacen;
 
     /**
+     *
+     * @var string
+     */
+    public $creationdate;
+
+    /**
      * user's email.
      *
      * @var string
@@ -123,6 +129,8 @@ class User extends Base\ModelClass
     public function clear()
     {
         parent::clear();
+        $this->codalmacen = $this->toolBox()->appSettings()->get('default', 'codalmacen');
+        $this->creationdate = \date(self::DATE_STYLE);
         $this->enabled = true;
         $this->idempresa = $this->toolBox()->appSettings()->get('default', 'idempresa', 1);
         $this->langcode = \FS_LANG;
@@ -213,7 +221,9 @@ class User extends Base\ModelClass
             $this->lastactivity = null;
         }
 
-        if ($this->level === null) {
+        if ($this->admin) {
+            $this->level = 99;
+        } elseif ($this->level === null) {
             $this->level = 0;
         }
 
@@ -227,7 +237,7 @@ class User extends Base\ModelClass
         }
 
         $this->email = $this->toolBox()->utils()->noHtml(\mb_strtolower($this->email, 'UTF8'));
-        if (!empty($this->email) && false === \filter_var($this->email, \FILTER_VALIDATE_EMAIL)) {
+        if ($this->email && false === \filter_var($this->email, \FILTER_VALIDATE_EMAIL)) {
             $this->toolBox()->i18nLog()->warning('not-valid-email', ['%email%' => $this->email]);
             $this->email = null;
             return false;

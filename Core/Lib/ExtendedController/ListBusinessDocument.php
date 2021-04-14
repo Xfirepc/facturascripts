@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2018-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2018-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -128,10 +128,10 @@ abstract class ListBusinessDocument extends ListController
         $this->addView($viewName, $modelName, $label, 'fas fa-copy');
         $this->addSearchFields($viewName, ['codigo', 'nombre', 'numproveedor', 'observaciones']);
         $this->addOrderBy($viewName, ['codigo'], 'code');
-        $this->addOrderBy($viewName, ['fecha', 'hora', 'codigo'], 'date', 2);
-        $this->addOrderBy($viewName, ['numero'], 'number');
+        $this->addOrderBy($viewName, ['fecha', $this->tableColToNumber('numero')], 'date', 2);
+        $this->addOrderBy($viewName, [$this->tableColToNumber('numero')], 'number');
         $this->addOrderBy($viewName, ['numproveedor'], 'numsupplier');
-        $this->addOrderBy($viewName, ['codproveedor'], 'supplier');
+        $this->addOrderBy($viewName, ['codproveedor'], 'supplier-code');
         $this->addOrderBy($viewName, ['total'], 'total');
 
         /// filters
@@ -151,9 +151,9 @@ abstract class ListBusinessDocument extends ListController
         $this->addView($viewName, $modelName, $label, 'fas fa-copy');
         $this->addSearchFields($viewName, ['codigo', 'nombrecliente', 'numero2', 'observaciones']);
         $this->addOrderBy($viewName, ['codigo'], 'code');
-        $this->addOrderBy($viewName, ['codcliente'], 'customer');
-        $this->addOrderBy($viewName, ['fecha', 'codigo'], 'date', 2);
-        $this->addOrderBy($viewName, ['numero'], 'number');
+        $this->addOrderBy($viewName, ['codcliente'], 'customer-code');
+        $this->addOrderBy($viewName, ['fecha', $this->tableColToNumber('numero')], 'date', 2);
+        $this->addOrderBy($viewName, [$this->tableColToNumber('numero')], 'number');
         $this->addOrderBy($viewName, ['numero2'], 'number2');
         $this->addOrderBy($viewName, ['total'], 'total');
 
@@ -203,5 +203,16 @@ abstract class ListBusinessDocument extends ListController
         }
 
         return parent::execPreviousAction($action);
+    }
+
+    /**
+     * 
+     * @param string $name
+     *
+     * @return string
+     */
+    private function tableColToNumber(string $name)
+    {
+        return \strtolower(\FS_DB_TYPE) == 'postgresql' ? 'CAST(' . $name . ' as integer)' : 'CAST(' . $name . ' as unsigned)';
     }
 }

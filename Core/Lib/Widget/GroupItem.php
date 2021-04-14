@@ -93,17 +93,18 @@ class GroupItem extends VisualItem
      *
      * @param object $model
      * @param bool   $forceReadOnly
+     * @param bool   $onlyField
      *
      * @return string
      */
-    public function edit($model, $forceReadOnly = false)
+    public function edit($model, $forceReadOnly = false, $onlyField = false)
     {
         $divClass = $this->numcolumns > 0 ? $this->css('col-md-') . $this->numcolumns : $this->css('col');
         $divId = empty($this->id) ? '' : ' id="' . $this->id . '"';
         $rowClass = $this->css('form-row') . ' ' . $this->valign();
 
         $html = '<div' . $divId . ' class="' . $divClass . '"><div class="' . $rowClass . '">';
-        if (!empty($this->title)) {
+        if ($this->title) {
             $html .= $this->legend();
         }
 
@@ -111,7 +112,7 @@ class GroupItem extends VisualItem
             if ($forceReadOnly) {
                 $col->widget->readonly = 'true';
             }
-            $html .= $col->edit($model);
+            $html .= $col->edit($model, $onlyField);
         }
 
         return $html . '</div></div>';
@@ -199,7 +200,7 @@ class GroupItem extends VisualItem
     protected function legend()
     {
         $icon = empty($this->icon) ? '' : '<i class="' . $this->icon . ' fa-fw"></i> ';
-        return '<legend class="text-info">' . $icon . static::$i18n->trans($this->title) . '</legend>';
+        return '<legend class="text-info mt-3">' . $icon . static::$i18n->trans($this->title) . '</legend>';
     }
 
     /**

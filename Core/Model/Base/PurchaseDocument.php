@@ -69,11 +69,14 @@ abstract class PurchaseDocument extends TransformerDocument
      *
      * @param string $reference
      *
-     * @return BusinessDocumentLine
+     * @return PurchaseDocumentLine
      */
     public function getNewProductLine($reference)
     {
         $newLine = $this->getNewLine();
+        if (empty($reference)) {
+            return $newLine;
+        }
 
         $variant = new Variante();
         $where1 = [new DataBaseWhere('referencia', $this->toolBox()->utils()->noHtml($reference))];
@@ -220,7 +223,7 @@ abstract class PurchaseDocument extends TransformerDocument
             new DataBaseWhere('codproveedor', $this->codproveedor),
             new DataBaseWhere('referencia', $newLine->referencia)
         ];
-        if ($supplierProd->loadFromCode('', $where)) {
+        if ($supplierProd->loadFromCode('', $where) && $supplierProd->precio > 0) {
             $newLine->dtopor = $supplierProd->dtopor;
             $newLine->dtopor2 = $supplierProd->dtopor2;
             $newLine->pvpunitario = $supplierProd->precio;

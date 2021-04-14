@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -72,20 +72,6 @@ class ListView extends BaseView
     public $totalAmounts = [];
 
     /**
-     * ListView constructor and initialization.
-     *
-     * @param string $name
-     * @param string $title
-     * @param string $modelName
-     * @param string $icon
-     */
-    public function __construct($name, $title, $modelName, $icon)
-    {
-        parent::__construct($name, $title, $modelName, $icon);
-        $this->template = static::DEFAULT_TEMPLATE;
-    }
-
-    /**
      * Adds a field to the Order By list
      *
      * @param array  $fields
@@ -94,14 +80,14 @@ class ListView extends BaseView
      */
     public function addOrderBy(array $fields, $label, $default = 0)
     {
-        $key1 = \strtolower(\implode('|', $fields)) . '_asc';
+        $key1 = \count($this->orderOptions);
         $this->orderOptions[$key1] = [
             'fields' => $fields,
             'label' => $this->toolBox()->i18n()->trans($label),
             'type' => 'ASC'
         ];
 
-        $key2 = \strtolower(\implode('|', $fields)) . '_desc';
+        $key2 = \count($this->orderOptions);
         $this->orderOptions[$key2] = [
             'fields' => $fields,
             'label' => $this->toolBox()->i18n()->trans($label),

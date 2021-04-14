@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2019-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2019-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,7 +35,7 @@ trait ListBusinessActionTrait
 
     abstract public function redirect($url, $delay = 0);
 
-    abstract public function toolBox();
+    abstract public static function toolBox();
 
     /**
      * Adds buttons to approve documents.
@@ -137,11 +137,13 @@ trait ListBusinessActionTrait
                 }
 
                 $model->idestado = $status->idestado;
-                if (false === $model->save()) {
-                    $this->toolBox()->i18nLog()->error('record-save-error');
-                    $dataBase->rollback();
-                    return true;
+                if ($model->save()) {
+                    break;
                 }
+
+                $this->toolBox()->i18nLog()->error('record-save-error');
+                $dataBase->rollback();
+                return true;
             }
         }
 
@@ -205,11 +207,13 @@ trait ListBusinessActionTrait
                 }
 
                 $model->idestado = $status->idestado;
-                if (false === $model->save()) {
-                    $this->toolBox()->i18nLog()->error('record-save-error');
-                    $dataBase->rollback();
-                    return true;
+                if ($model->save()) {
+                    break;
                 }
+
+                $this->toolBox()->i18nLog()->error('record-save-error');
+                $dataBase->rollback();
+                return true;
             }
         }
 

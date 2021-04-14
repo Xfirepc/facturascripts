@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2013-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2013-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -54,6 +54,12 @@ abstract class BusinessDocumentLine extends ModelOnChangeClass
      * @var string
      */
     public $descripcion;
+
+    /**
+     *
+     * @var bool
+     */
+    private $disableUpdateStock = false;
 
     /**
      * Percentage of discount.
@@ -187,6 +193,15 @@ abstract class BusinessDocumentLine extends ModelOnChangeClass
     }
 
     /**
+     * 
+     * @param bool $value
+     */
+    public function disableUpdateStock(bool $value)
+    {
+        $this->disableUpdateStock = $value;
+    }
+
+    /**
      * Returns the identifier of the document.
      *
      * @return int
@@ -267,6 +282,10 @@ abstract class BusinessDocumentLine extends ModelOnChangeClass
             $this->codimpuesto = null;
         }
 
+        if ($this->servido < 0 && $this->cantidad >= 0) {
+            $this->servido = 0.0;
+        }
+
         $utils = $this->toolBox()->utils();
         $this->descripcion = $utils->noHtml($this->descripcion);
         $this->pvpsindto = $this->pvpunitario * $this->cantidad;
@@ -307,7 +326,7 @@ abstract class BusinessDocumentLine extends ModelOnChangeClass
         if (false === $toStock->loadFromCode('', $where2)) {
             /// stock not found, then create one
             $toStock->codalmacen = $toCodalmacen;
-            $toStock->idproducto = $this->idproducto;
+            $toStock->idproducto = $this->idproducto ?? $this->getProducto()->idproducto;
             $toStock->referencia = $this->referencia;
         }
 
@@ -351,7 +370,7 @@ abstract class BusinessDocumentLine extends ModelOnChangeClass
         switch ($mode) {
             case 1:
             case -1:
-                $stock->cantidad += $mode * $quantity;
+                $stock->cantidad += $mode * ($quantity - $served);
                 break;
 
             case 2:
@@ -430,7 +449,9 @@ abstract class BusinessDocumentLine extends ModelOnChangeClass
      */
     protected function updateStock()
     {
-        if (empty($this->actualizastock) && empty($this->previousData['actualizastock'])) {
+        if ($this->disableUpdateStock) {
+            return true;
+        } elseif (empty($this->actualizastock) && empty($this->previousData['actualizastock'])) {
             return true;
         }
 
@@ -457,7 +478,7 @@ abstract class BusinessDocumentLine extends ModelOnChangeClass
         if (false === $stock->loadFromCode('', $where2)) {
             /// stock not found, then create one
             $stock->codalmacen = $doc->codalmacen;
-            $stock->idproducto = $this->idproducto;
+            $stock->idproducto = $this->idproducto ?? $this->getProducto()->idproducto;
             $stock->referencia = $this->referencia;
         }
 
@@ -472,6 +493,7 @@ abstract class BusinessDocumentLine extends ModelOnChangeClass
 
         if ($stock->save()) {
             $this->pipe('updateStock', $doc);
+            $this->disableUpdateStock = true;
             return true;
         }
 

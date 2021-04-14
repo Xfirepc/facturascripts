@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2020 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2021 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -63,7 +63,7 @@ class EditEjercicio extends EditController
     /**
      * Add action buttons.
      */
-    protected function addButtonActions()
+    protected function addExerciseActionButtons()
     {
         $status = $this->getViewModelValue('EditEjercicio', 'estado');
         switch ($status) {
@@ -74,7 +74,7 @@ class EditEjercicio extends EditController
                     'color' => 'warning',
                     'icon' => 'fas fa-file-import',
                     'label' => 'import-accounting-plan',
-                    'type' => 'modal',
+                    'type' => 'modal'
                 ]);
 
                 $this->addButton('EditEjercicio', [
@@ -83,7 +83,7 @@ class EditEjercicio extends EditController
                     'color' => 'danger',
                     'icon' => 'fas fa-calendar-check',
                     'label' => 'close-exercise',
-                    'type' => 'modal',
+                    'type' => 'modal'
                 ]);
 
                 $model = $this->views['EditEjercicio']->model;
@@ -97,7 +97,7 @@ class EditEjercicio extends EditController
                     'color' => 'warning',
                     'icon' => 'fas fa-calendar-plus',
                     'label' => 'open-exercise',
-                    'type' => 'modal',
+                    'type' => 'modal'
                 ]);
                 break;
         }
@@ -112,12 +112,12 @@ class EditEjercicio extends EditController
      */
     private function checkAndLoad($code): bool
     {
-        if (!$this->permissions->allowUpdate) {
+        if (false === $this->permissions->allowUpdate) {
             $this->toolBox()->i18nLog()->warning('not-allowed-modify');
             return false;
         }
 
-        if (!$this->getModel()->loadFromCode($code)) {
+        if (false === $this->getModel()->loadFromCode($code)) {
             $this->toolBox()->i18nLog()->error('record-not-found');
             return false;
         }
@@ -129,11 +129,11 @@ class EditEjercicio extends EditController
      *
      * @return bool
      */
-    protected function closeExercise(): bool
+    protected function closeExerciseAction(): bool
     {
         $code = $this->request->request->get('codejercicio');
-        if (!$this->checkAndLoad($code)) {
-            return false;
+        if (false === $this->checkAndLoad($code)) {
+            return true;
         }
 
         $data = [
@@ -146,10 +146,9 @@ class EditEjercicio extends EditController
         $closing = new ClosingToAcounting();
         if ($closing->exec($model, $data)) {
             $this->toolBox()->i18nLog()->notice('closing-accounting-completed');
-            return true;
         }
-
-        return false;
+        /// error message not needed
+        return true;
     }
 
     /**
@@ -158,6 +157,12 @@ class EditEjercicio extends EditController
     protected function createViews()
     {
         parent::createViews();
+
+        /// disable company column if there is only one company
+        if ($this->empresa->count() < 2) {
+            $this->views[$this->getMainViewName()]->disableColumn('company');
+        }
+
         $this->createViewsAccounting();
         $this->createViewsSubaccounting();
         $this->createViewsAccountingEntries();
@@ -223,8 +228,7 @@ class EditEjercicio extends EditController
     {
         switch ($action) {
             case 'close-exercise':
-                $this->closeExercise();
-                return true;
+                return $this->closeExerciseAction();
 
             case 'export-accounting':
                 return $this->exportAccountingPlan();
@@ -233,8 +237,7 @@ class EditEjercicio extends EditController
                 return $this->importAccountingPlan();
 
             case 'open-exercise':
-                $this->openExercise();
-                return true;
+                return $this->openExerciseAction();
 
             default:
                 return parent::execPreviousAction($action);
@@ -288,9 +291,8 @@ class EditEjercicio extends EditController
                     $this->toolBox()->i18nLog()->notice('record-updated-correctly');
                     return true;
                 }
-
                 $this->toolBox()->i18nLog()->error('record-save-error');
-                break;
+                return true;
 
             case 'text/csv':
             case 'text/plain':
@@ -298,14 +300,11 @@ class EditEjercicio extends EditController
                     $this->toolBox()->i18nLog()->notice('record-updated-correctly');
                     return true;
                 }
-
                 $this->toolBox()->i18nLog()->error('record-save-error');
-                break;
-
-            default:
-                $this->toolBox()->i18nLog()->error('file-not-supported');
+                return true;
         }
 
+        $this->toolBox()->i18nLog()->error('file-not-supported');
         return true;
     }
 
@@ -319,7 +318,7 @@ class EditEjercicio extends EditController
     {
         $codpais = $this->toolBox()->appSettings()->get('default', 'codpais');
         $filePath = \FS_FOLDER . '/Dinamic/Data/Codpais/' . $codpais . '/defaultPlan.csv';
-        if (!file_exists($filePath)) {
+        if (false === \file_exists($filePath)) {
             $this->toolBox()->i18nLog()->warning('file-not-found', ['%fileName%' => $filePath]);
             return true;
         }
@@ -347,7 +346,7 @@ class EditEjercicio extends EditController
         switch ($viewName) {
             case 'EditEjercicio':
                 parent::loadData($viewName, $view);
-                $this->addButtonActions();
+                $this->addExerciseActionButtons();
                 break;
 
             case 'ListAsiento':
@@ -367,13 +366,15 @@ class EditEjercicio extends EditController
     }
 
     /**
-     * Re-open closed exercise
+     * Re-open closed exercise.
+     * 
+     * @return bool
      */
-    protected function openExercise(): bool
+    protected function openExerciseAction(): bool
     {
         $code = $this->request->request->get('codejercicio');
-        if (!$this->checkAndLoad($code)) {
-            return false;
+        if (false === $this->checkAndLoad($code)) {
+            return true;
         }
 
         $data = [
@@ -385,9 +386,8 @@ class EditEjercicio extends EditController
         $closing = new ClosingToAcounting();
         if ($closing->delete($model, $data)) {
             $this->toolBox()->i18nLog()->notice('opening-acounting-completed');
-            return true;
         }
-
-        return false;
+        /// error message not needed
+        return true;
     }
 }
